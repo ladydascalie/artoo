@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Main bucket body: warm amber lit from upper-left -->
+    <linearGradient id="bodyFill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#b45309"/>
+      <stop offset="35%"  stop-color="#f97316"/>
+      <stop offset="65%"  stop-color="#ea6d0a"/>
+      <stop offset="100%" stop-color="#92400e"/>
+    </linearGradient>
+
+    <!-- Rim top face: brighter, light hits it directly -->
+    <linearGradient id="rimFill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#fb923c"/>
+      <stop offset="45%"  stop-color="#fed7aa"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+
+    <!-- Rim inner wall: darker, facing down -->
+    <linearGradient id="rimInner" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#92400e"/>
+      <stop offset="50%"  stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+
+    <!-- Bottom ellipse: darkest, facing away from light -->
+    <linearGradient id="bottomFill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#78350f"/>
+      <stop offset="50%"  stop-color="#92400e"/>
+      <stop offset="100%" stop-color="#6b2d0c"/>
+    </linearGradient>
+
+    <!-- Specular highlight on rim -->
+    <radialGradient id="rimSheen" cx="38%" cy="40%" r="45%">
+      <stop offset="0%"   stop-color="rgba(255,255,255,0.55)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+
+    <!-- Soft ambient glow behind bucket -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="18" result="blur"/>
+      <feComposite in="blur" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!--
+    Geometry reference (512×512):
+      Rim ellipse  center: (256, 178)  rx=148 ry=38
+      Base ellipse center: (256, 364)  rx=108 ry=28
+
+      Body sides connect:
+        Left:  rim at (108, 178) → base at (148, 364)
+        Right: rim at (404, 178) → base at (364, 364)
+
+      The slight inward taper (148→108 each side) gives a convincing
+      bucket silhouette without looking too cylindrical.
+  -->
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="110" fill="#1c1c1e"/>
+
+  <!-- Ambient glow -->
+  <ellipse cx="256" cy="270" rx="148" ry="160"
+           fill="#f97316" filter="url(#glow)" opacity="0.22"/>
+
+  <!-- Bucket body -->
+  <path d="
+    M 108,178
+    L 404,178
+    L 364,364
+    L 148,364
+    Z
+  " fill="url(#bodyFill)"/>
+
+  <!-- Bottom ellipse (sits on body bottom edge) -->
+  <ellipse cx="256" cy="364" rx="108" ry="28" fill="url(#bottomFill)"/>
+
+  <!-- Rim outer ellipse (top face of the rim ring) -->
+  <ellipse cx="256" cy="178" rx="148" ry="38" fill="url(#rimFill)"/>
+
+  <!-- Rim inner wall (the inside of the rim, slightly lower and smaller) -->
+  <ellipse cx="256" cy="186" rx="128" ry="30" fill="url(#rimInner)"/>
+
+  <!-- Specular highlight on rim top -->
+  <ellipse cx="256" cy="178" rx="148" ry="38" fill="url(#rimSheen)"/>
+
+  <!-- Body left-side highlight: thin bright strip near left edge -->
+  <path d="
+    M 108,178
+    C 108,178 124,178 132,182
+    L 158,356
+    C 158,356 144,362 148,364
+    L 108,178
+    Z
+  " fill="white" opacity="0.07"/>
+
+  <!-- Body centre highlight: wide soft band, simulates curved surface -->
+  <path d="
+    M 200,178
+    L 312,178
+    L 296,364
+    L 216,364
+    Z
+  " fill="white" opacity="0.06"/>
+</svg>

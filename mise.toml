@@ -1,0 +1,57 @@
+[tools]
+go   = "1.26.1"
+node = "22.22.1"
+
+# ---------------------------------------------------------------------------
+# Development
+# ---------------------------------------------------------------------------
+
+[tasks.dev]
+description = "Start hot-reload dev server"
+run = "wails dev"
+
+[tasks.build]
+description = "Build production binary"
+run = "wails build"
+
+# ---------------------------------------------------------------------------
+# Linux system install / uninstall
+# ---------------------------------------------------------------------------
+
+[tasks.install]
+description = "Install desktop entry, binary, and icon to /usr/local (requires sudo)"
+run = """
+set -e
+sudo install -Dm00644 build/linux/artoo.desktop  /usr/local/share/applications/artoo.desktop
+sudo install -Dm00755 build/bin/artoo             /usr/local/bin/artoo
+sudo install -Dm00644 build/appicon.png           /usr/local/share/pixmaps/io.github.bcable.artoo.png
+"""
+
+[tasks.uninstall]
+description = "Remove desktop entry, binary, and icon from /usr/local (requires sudo)"
+run = """
+set -e
+sudo rm -f /usr/local/share/applications/artoo.desktop
+sudo rm -f /usr/local/bin/artoo
+sudo rm -f /usr/local/share/pixmaps/io.github.bcable.artoo.png
+"""
+
+# ---------------------------------------------------------------------------
+# Assets
+# ---------------------------------------------------------------------------
+
+[tasks.icons]
+description = "Re-render build/icon.svg to PNG at all required hicolor sizes (requires rsvg-convert)"
+run = """
+set -e
+SVG=build/icon.svg
+NAME=io.github.bcable.artoo
+mkdir -p build/icons/{64,128,256,512}
+for SIZE in 64 128 256 512; do
+  rsvg-convert -w "$SIZE" -h "$SIZE" "$SVG" \
+    -o "build/icons/${SIZE}/${NAME}.png"
+  echo "  ${SIZE}x${SIZE}"
+done
+cp "build/icons/256/${NAME}.png" build/appicon.png
+echo "Done — appicon.png updated"
+"""

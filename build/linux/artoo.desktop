@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Artoo
+Comment=Cloudflare R2 object storage browser
+Exec=artoo
+Icon=io.github.bcable.artoo
+Type=Application
+Categories=Utility;FileManager;
+Terminal=false
