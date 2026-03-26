@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	maxPreviewImageBytes = 10 << 20 // 10 MB
-	maxPreviewTextBytes  = 2 << 20  // 2 MB
+	defaultPreviewImageBytes = 512 << 10 // 512 KB default — balances quality vs R2 Class B cost
+	maxPreviewTextBytes      = 2 << 20   // 2 MB (text is cheap, keep as-is)
 )
 
 // PreviewPayload is returned to the frontend for rendering.
@@ -57,7 +57,10 @@ func (a *App) PreviewObject(bucket, key string) (*PreviewPayload, error) {
 
 	limit := int64(maxPreviewTextBytes)
 	if previewType == "image" {
-		limit = maxPreviewImageBytes
+		limit = defaultPreviewImageBytes
+		if a.config != nil && a.config.PreviewSizeLimit > 0 {
+			limit = a.config.PreviewSizeLimit
+		}
 	}
 
 	if previewType == "unsupported" || (objectSize > 0 && objectSize > limit) {

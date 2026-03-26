@@ -41,6 +41,7 @@ export namespace main {
 	    inline_previews?: boolean;
 	    view_mode?: string;
 	    delete_enabled?: boolean;
+	    preview_size_limit?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -56,6 +57,7 @@ export namespace main {
 	        this.inline_previews = source["inline_previews"];
 	        this.view_mode = source["view_mode"];
 	        this.delete_enabled = source["delete_enabled"];
+	        this.preview_size_limit = source["preview_size_limit"];
 	    }
 	}
 	export class ObjectInfo {

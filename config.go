@@ -19,6 +19,7 @@ type Config struct {
 	InlinePreviews      bool   `json:"inline_previews,omitempty"`
 	ViewMode            string `json:"view_mode,omitempty"` // "list" | "grid"
 	DeleteEnabled       bool   `json:"delete_enabled,omitempty"`
+	PreviewSizeLimit    int64  `json:"preview_size_limit,omitempty"` // bytes; 0 = use default
 }
 
 // configPath returns ~/.config/artoo/config.json
@@ -155,6 +156,23 @@ func (a *App) SetViewMode(mode string) error {
 // DeleteAllowed returns whether delete operations are currently permitted.
 func (a *App) DeleteAllowed() bool {
 	return a.config != nil && a.config.DeleteEnabled
+}
+
+// SetPreviewSizeLimit persists the image preview fetch cap in bytes.
+func (a *App) SetPreviewSizeLimit(bytes int64) error {
+	if a.config == nil {
+		return fmt.Errorf("not connected")
+	}
+	a.config.PreviewSizeLimit = bytes
+	p, err := configPath()
+	if err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(a.config, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(p, data, 0600)
 }
 
 // SetDeleteEnabled persists the delete lock setting.

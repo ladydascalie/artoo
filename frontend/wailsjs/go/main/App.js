@@ -82,6 +82,10 @@ export function SetInlinePreviews(arg1) {
   return window['go']['main']['App']['SetInlinePreviews'](arg1);
 }
 
+export function SetPreviewSizeLimit(arg1) {
+  return window['go']['main']['App']['SetPreviewSizeLimit'](arg1);
+}
+
 export function SetViewMode(arg1) {
   return window['go']['main']['App']['SetViewMode'](arg1);
 }

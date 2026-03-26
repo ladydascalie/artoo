@@ -22,8 +22,11 @@
     SetViewMode,
     SetDeleteEnabled,
     SearchObjects,
+    SetPreviewSizeLimit,
   } from "../wailsjs/go/main/App.js";
   import { EventsOn } from "../wailsjs/runtime/runtime.js";
+
+  const DEFAULT_PREVIEW_SIZE = 524288; // 512 KB — default image preview cap
 
   // --- State ---
   let view = "loading"; // loading | login | browser | settings
@@ -40,9 +43,12 @@
   let settingsSaving = false;
   let settingsInlinePreviews = false;
   let settingsDeleteEnabled = false;
+  let settingsPreviewSizeLimit = DEFAULT_PREVIEW_SIZE;
+  let confirmDisconnect = false;
 
   async function openSettings() {
     settingsError = "";
+    confirmDisconnect = false;
     try {
       const cfg = await GetConfig();
       if (cfg) {
@@ -53,6 +59,7 @@
         settingsConcurrency = cfg.download_concurrency || 4;
         settingsInlinePreviews = cfg.inline_previews ?? false;
         settingsDeleteEnabled = cfg.delete_enabled ?? false;
+        settingsPreviewSizeLimit = cfg.preview_size_limit || DEFAULT_PREVIEW_SIZE;
         viewMode = cfg.view_mode || "list";
       }
     } catch (_) {}
@@ -69,6 +76,8 @@
       dlConcurrency = settingsConcurrency;
       await toggleInlinePreviews(settingsInlinePreviews);
       await setDeleteEnabled(settingsDeleteEnabled);
+      await SetPreviewSizeLimit(settingsPreviewSizeLimit);
+      previewSizeLimit = settingsPreviewSizeLimit;
       // Reload bucket list and stats with new credentials
       bucketStats = {};
       view = "browser";
@@ -100,8 +109,15 @@
       });
     });
 
-    const onKeyDown = (e) => { if (e.key === "Shift") shiftHeld = true; };
-    const onKeyUp   = (e) => { if (e.key === "Shift") shiftHeld = false; };
+    const onKeyDown = (e) => {
+      if (e.key === "Shift") shiftHeld = true;
+      if (e.altKey && e.key === "ArrowLeft")  { e.preventDefault(); goBack(); }
+      if (e.altKey && e.key === "ArrowRight") { e.preventDefault(); goForward(); }
+      // XF86Back / XF86Forward — emitted by some Linux mice as key events
+      if (e.key === "BrowserBack")    { e.preventDefault(); goBack(); }
+      if (e.key === "BrowserForward") { e.preventDefault(); goForward(); }
+    };
+    const onKeyUp = (e) => { if (e.key === "Shift") shiftHeld = false; };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup",   onKeyUp);
 
@@ -195,7 +211,12 @@
   let buckets = [];
   let currentBucket = "";
   let currentPrefix = "";
-  let prefixStack = [];
+  // Navigation history — each entry is { bucket, prefix }
+  // bucket = "" means the bucket list view.
+  let navHistory = [];
+  let navForward = [];
+  $: canGoBack    = navHistory.length > 0;
+  $: canGoForward = navForward.length > 0;
   let objects = [];
   let folders = [];
   let selected = new Set();
@@ -241,7 +262,8 @@
     } catch (_) {}
     currentBucket = "";
     currentPrefix = "";
-    prefixStack = [];
+    navHistory = [];
+    navForward = [];
     objects = [];
     folders = [];
     buckets = [];
@@ -265,10 +287,56 @@
     }
   }
 
+  // Push current location onto back-stack and clear forward.
+  function pushNav() {
+    navHistory = [...navHistory, { bucket: currentBucket, prefix: currentPrefix }];
+    navForward = [];
+  }
+
+  // Apply a location without touching history (used by goBack/goForward).
+  async function applyLocation({ bucket, prefix }) {
+    if (!bucket) {
+      currentBucket = "";
+      currentPrefix = "";
+      objects = [];
+      folders = [];
+      selected = new Set();
+      selectedFolders = new Set();
+      clearExpanded();
+      clearSearch();
+      lastSelectedIndex = null;
+    } else {
+      currentBucket = bucket;
+      currentPrefix = prefix;
+      selected = new Set();
+      selectedFolders = new Set();
+      clearExpanded();
+      clearSearch();
+      lastSelectedIndex = null;
+      await loadObjects();
+    }
+  }
+
+  async function goBack() {
+    if (!canGoBack) return;
+    const dest = navHistory[navHistory.length - 1];
+    navHistory = navHistory.slice(0, -1);
+    navForward = [{ bucket: currentBucket, prefix: currentPrefix }, ...navForward];
+    await applyLocation(dest);
+  }
+
+  async function goForward() {
+    if (!canGoForward) return;
+    const dest = navForward[0];
+    navForward = navForward.slice(1);
+    navHistory = [...navHistory, { bucket: currentBucket, prefix: currentPrefix }];
+    await applyLocation(dest);
+  }
+
   async function selectBucket(name) {
+    pushNav();
     currentBucket = name;
     currentPrefix = "";
-    prefixStack = [];
     await loadObjects();
   }
 
@@ -297,23 +365,25 @@
   }
 
   function navigateInto(prefix) {
-    prefixStack = [...prefixStack, currentPrefix];
+    pushNav();
     currentPrefix = prefix;
     loadObjects();
   }
 
   function navigateUp() {
-    if (prefixStack.length > 0) {
-      currentPrefix = prefixStack[prefixStack.length - 1];
-      prefixStack = prefixStack.slice(0, -1);
+    if (currentPrefix !== "") {
+      pushNav();
+      const parts = currentPrefix.split("/").filter(Boolean);
+      parts.pop();
+      currentPrefix = parts.length > 0 ? parts.join("/") + "/" : "";
       loadObjects();
     }
   }
 
   function backToBuckets() {
+    pushNav();
     currentBucket = "";
     currentPrefix = "";
-    prefixStack = [];
     objects = [];
     folders = [];
     selected = new Set();
@@ -632,6 +702,7 @@
 
   let viewMode = "list"; // "list" | "grid"
   let deleteEnabled = false;
+  let previewSizeLimit = DEFAULT_PREVIEW_SIZE;
 
   async function setViewMode(mode) {
     viewMode = mode;
@@ -690,6 +761,7 @@
     inlinePreviews = cfg?.inline_previews ?? false;
     viewMode = cfg?.view_mode || "list";
     deleteEnabled = cfg?.delete_enabled ?? false;
+    previewSizeLimit = cfg?.preview_size_limit || DEFAULT_PREVIEW_SIZE;
   }
 
   async function toggleInlinePreviews(val) {
@@ -796,6 +868,8 @@
   <header>
     <div class="header-left">
       <strong>Artoo</strong>
+      <button class="btn-ghost nav-btn" disabled={!canGoBack}    on:click={goBack}    title="Back (Alt+←)">←</button>
+      <button class="btn-ghost nav-btn" disabled={!canGoForward} on:click={goForward} title="Forward (Alt+→)">→</button>
       {#if currentBucket}
         <button class="btn-ghost" on:click={backToBuckets}>Buckets</button>
         <span class="muted">/</span>
@@ -806,30 +880,8 @@
             <button
               class="btn-ghost breadcrumb"
               on:click={() => {
-                const target =
-                  currentPrefix
-                    .split("/")
-                    .filter(Boolean)
-                    .slice(0, i + 1)
-                    .join("/") + "/";
-                // Rebuild prefix stack
-                const segments = currentPrefix.split("/").filter(Boolean);
-                prefixStack = [];
-                for (let j = 0; j < i; j++) {
-                  prefixStack.push(
-                    segments.slice(0, j).join("/") + (j > 0 ? "/" : "")
-                  );
-                }
-                if (i === 0) prefixStack = [""];
-                else
-                  prefixStack = [
-                    "",
-                    ...Array.from({ length: i }, (_, j) =>
-                      segments.slice(0, j + 1).join("/") + "/"
-                    ).slice(0, -1),
-                  ];
-                // Hacky but avoids extra state: just recalc
-                prefixStack = ["", ...segments.slice(0, i).map((_, j) => segments.slice(0, j + 1).join("/") + "/")];
+                const target = currentPrefix.split("/").filter(Boolean).slice(0, i + 1).join("/") + "/";
+                pushNav();
                 currentPrefix = target;
                 loadObjects();
               }}>{segment}</button
@@ -843,7 +895,6 @@
     </div>
     <div class="header-right">
       <button class="btn-ghost" on:click={openSettings} title="Settings">⚙</button>
-      <button class="btn-ghost" on:click={handleLogout}>Disconnect</button>
     </div>
   </header>
 
@@ -897,7 +948,7 @@
       <!-- Object browser -->
       <div class="toolbar">
         <div class="toolbar-left">
-          {#if prefixStack.length > 0 || currentPrefix}
+          {#if currentPrefix}
             <button class="btn-ghost" on:click={navigateUp}>.. up</button>
           {/if}
           {#if objects.length + folders.length > 0}
@@ -1290,6 +1341,22 @@
             <input type="checkbox" bind:checked={settingsInlinePreviews} />
             <span class="toggle-label">{settingsInlinePreviews ? "On" : "Off"}</span>
           </label>
+
+          <span class="field-label">
+            Image preview cap
+            <span class="optional">limits R2 Class B cost per thumbnail</span>
+          </span>
+          <div>
+            <select bind:value={settingsPreviewSizeLimit}>
+              <option value={131072}>128 KB</option>
+              <option value={262144}>256 KB</option>
+              <option value={524288}>512 KB</option>
+              <option value={1048576}>1 MB</option>
+              <option value={2097152}>2 MB</option>
+              <option value={5242880}>5 MB</option>
+              <option value={10485760}>10 MB</option>
+            </select>
+          </div>
         </div>
       </section>
 
@@ -1317,6 +1384,29 @@
         </button>
         <button class="btn-ghost" on:click={cancelSettings}>Cancel</button>
       </div>
+
+      <section class="disconnect-section">
+        <h3>Account</h3>
+        {#if confirmDisconnect}
+          <div class="field-grid">
+            <span class="field-label danger-text">Clear all credentials?</span>
+            <div style="display:flex;gap:8px">
+              <button class="btn-danger" on:click={handleLogout}>Disconnect</button>
+              <button class="btn-ghost" on:click={() => confirmDisconnect = false}>Cancel</button>
+            </div>
+          </div>
+        {:else}
+          <div class="field-grid">
+            <span class="field-label">
+              Disconnect
+              <span class="optional">clears saved credentials from disk</span>
+            </span>
+            <button class="btn-ghost disconnect-btn" on:click={() => confirmDisconnect = true}>
+              Disconnect…
+            </button>
+          </div>
+        {/if}
+      </section>
     </div>
   </div>
 {/if}
@@ -1402,9 +1492,33 @@
     width: 80px !important;
   }
 
+  .settings-card select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 4px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    color-scheme: dark;
+  }
+
   .settings-actions {
     display: flex;
     gap: 8px;
+  }
+
+  .disconnect-section {
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+
+  .disconnect-btn {
+    color: var(--danger);
+  }
+  .disconnect-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
   }
 
   .login-card h1 {
@@ -1495,6 +1609,14 @@
   .breadcrumb {
     padding: 2px 4px;
     font-size: 13px;
+  }
+
+  .nav-btn {
+    padding: 2px 7px;
+    font-size: 14px;
+  }
+  .nav-btn:disabled {
+    opacity: 0.25;
   }
 
   /* Toolbar */

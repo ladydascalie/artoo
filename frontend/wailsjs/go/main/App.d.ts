@@ -42,6 +42,8 @@ export function SetDownloadConcurrency(arg1:number):Promise<void>;
 
 export function SetInlinePreviews(arg1:boolean):Promise<void>;
 
+export function SetPreviewSizeLimit(arg1:number):Promise<void>;
+
 export function SetViewMode(arg1:string):Promise<void>;
 
 export function TestConnection(arg1:string,arg2:string,arg3:string):Promise<void>;
