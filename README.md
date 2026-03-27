@@ -1,16 +1,73 @@
-# README
+# Artoo
 
-## About
+A lightweight desktop app for browsing and managing Cloudflare R2 buckets.
 
-This is the official Wails Svelte template.
+## Features
 
-## Live Development
+- Browse objects across multiple R2 buckets
+- Upload files and folders with drag-and-drop support
+- Download objects with parallel transfers
+- Preview images, text, JSON, and CSV files inline
+- Search objects by prefix
+- View bucket statistics
+- List and grid view modes
+- Configurable download concurrency
 
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
+## Requirements
+
+- [Go 1.24+](https://go.dev/dl/)
+- [Node.js 22+](https://nodejs.org/)
+- [Wails CLI](https://wails.io/docs/gettingstarted/installation)
+
+Install Wails:
+
+```sh
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
+```
+
+## Development
+
+Run the app in development mode with hot reload:
+
+```sh
+wails dev
+```
+
+Or using mise:
+
+```sh
+mise run dev
+```
 
 ## Building
 
-To build a redistributable, production mode package, use `wails build`.
+Build a production binary:
+
+```sh
+wails build
+```
+
+The binary will be output to `build/bin/`.
+
+## Installation (Linux)
+
+```sh
+mise run install
+```
+
+This installs the binary to `/usr/local/bin` and adds a desktop entry.
+
+## Configuration
+
+On first launch, enter your Cloudflare R2 credentials:
+
+- **Account ID**: Your Cloudflare account ID
+- **Access Key ID**: R2 API token access key
+- **Secret Access Key**: R2 API token secret key
+- **API Token** (optional): For bucket statistics via Cloudflare API
+
+Credentials are stored at `~/.config/artoo/config.json`.
+
+## License
+
+MIT
