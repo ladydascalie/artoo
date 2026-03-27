@@ -47,3 +47,7 @@ export function SetPreviewSizeLimit(arg1:number):Promise<void>;
 export function SetViewMode(arg1:string):Promise<void>;
 
 export function TestConnection(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function UploadObject(arg1:string,arg2:string):Promise<void>;
+
+export function UploadObjects(arg1:string,arg2:string):Promise<void>;

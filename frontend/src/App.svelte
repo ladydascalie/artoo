@@ -12,6 +12,8 @@
     DeletePrefix,
     DownloadObject,
     DownloadObjects,
+    UploadObject,
+    UploadObjects,
     EstimatePrefixes,
     GetDownloadConcurrency,
     SetDownloadConcurrency,
@@ -581,6 +583,27 @@
     confirmDelete = false;
   }
 
+  // --- Upload ---
+  async function handleUpload() {
+    error = "";
+    try {
+      await UploadObject(currentBucket, currentPrefix);
+      await loadObjects();
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  async function handleUploadMultiple() {
+    error = "";
+    try {
+      await UploadObjects(currentBucket, currentPrefix);
+      await loadObjects();
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
   // --- Download ---
   async function handleDownload(key) {
     error = "";
@@ -963,6 +986,7 @@
             <button class="btn-ghost view-btn" class:view-btn-active={viewMode === "list"} title="List view" on:click={() => setViewMode("list")}>☰</button>
             <button class="btn-ghost view-btn" class:view-btn-active={viewMode === "grid"} title="Grid view" on:click={() => setViewMode("grid")}>⊞</button>
           </div>
+          <button class="btn-ghost" on:click={handleUpload} title="Upload file">Upload</button>
           <div class="search-bar">
             <input
               class="search-input"

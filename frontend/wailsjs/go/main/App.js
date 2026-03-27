@@ -93,3 +93,11 @@ export function SetViewMode(arg1) {
 export function TestConnection(arg1, arg2, arg3) {
   return window['go']['main']['App']['TestConnection'](arg1, arg2, arg3);
 }
+
+export function UploadObject(arg1, arg2) {
+  return window['go']['main']['App']['UploadObject'](arg1, arg2);
+}
+
+export function UploadObjects(arg1, arg2) {
+  return window['go']['main']['App']['UploadObjects'](arg1, arg2);
+}
